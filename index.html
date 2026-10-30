@@ -1,0 +1,171 @@
+
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FanCode Live Player</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#080d19;color:white;
+ font-family:Arial,sans-serif;padding:15px;
+}
+.container{max-width:900px;margin:auto}
+h2{text-align:center;color:#7f9cff}
+.player{
+ background:#151e30;padding:15px;
+ border-radius:15px;border:1px solid #293650;
+}
+input,select,button{
+ width:100%;padding:13px;margin:7px 0;
+ border-radius:8px;border:1px solid #34415b;
+ background:#0b1221;color:white;font-size:14px;
+}
+button{
+ background:#627fff;border:0;
+ font-weight:bold;cursor:pointer;
+}
+video{
+ width:100%;aspect-ratio:16/9;
+ background:black;border-radius:10px;
+}
+#status{padding:10px;color:#9db2ff;font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h2>▶ UNIVERSAL LIVE PLAYER</h2>
+
+<div class="player">
+
+<input id="url" type="text"
+placeholder="Paste M3U8 / MPD / MP4 URL">
+
+<select id="format">
+<option value="auto">Auto Detect</option>
+<option value="hls">M3U8 / HLS</option>
+<option value="file">Direct Video</option>
+</select>
+
+<button onclick="playStream()">▶ PLAY STREAM</button>
+
+<video id="video" controls playsinline></video>
+
+<div id="status">Ready to play</div>
+
+<button onclick="stopStream()">STOP</button>
+<button onclick="reloadStream()">RELOAD</button>
+
+</div>
+</div>
+
+<script>
+
+const DEFAULT_URL = "https://in-mc-plive.fancode.com/mumbai/4250311_english_hls_f3039faaeb88655_1ta-di_h264/1080p.m3u8?hdntl=Expires=1793419926~_GO=Generated~acl=/mumbai/4250311_english_hls_f3039faaeb88655_1ta-di_h264/*~SessionID=26301734ad95c0a7e59610f8197f3df8_playbox_1ef13773-71e7-42~Signature=ATFKiJs-J4h1r7xzaktdbYsylgrpNkr8Cbmd4atIG5ypCydQCKbRFdSxz1-ybLEYdTsK6YNJw8M0fCivhivrQlyM1w0N";
+
+const video = document.getElementById("video");
+const urlInput = document.getElementById("url");
+const format = document.getElementById("format");
+const status = document.getElementById("status");
+
+let hls = null;
+let currentURL = "";
+
+urlInput.value = DEFAULT_URL;
+
+function cleanup(){
+ if(hls){
+  hls.destroy();
+  hls = null;
+ }
+ video.pause();
+ video.removeAttribute("src");
+ video.load();
+}
+
+function playStream(){
+
+ const url = urlInput.value.trim();
+
+ if(!url){
+  status.innerText = "Enter stream URL";
+  return;
+ }
+
+ cleanup();
+ currentURL = url;
+
+ let type = format.value;
+
+ if(type === "auto"){
+  type = /\.m3u8($|[?#])/i.test(url) ? "hls" : "file";
+ }
+
+ status.innerText = "Loading stream...";
+
+ if(type === "hls"){
+
+  if(video.canPlayType("application/vnd.apple.mpegurl")){
+   video.src = url;
+   video.play().catch(()=>{});
+  }
+  else if(Hls.isSupported()){
+
+   hls = new Hls({
+    enableWorker:true,
+    lowLatencyMode:true
+   });
+
+   hls.loadSource(url);
+   hls.attachMedia(video);
+
+   hls.on(Hls.Events.MANIFEST_PARSED,()=>{
+    status.innerText = "Stream Loaded";
+    video.play().catch(()=>{});
+   });
+
+   hls.on(Hls.Events.ERROR,(event,data)=>{
+    if(data.fatal){
+     status.innerText = "Error: " + data.details;
+    }
+   });
+
+  }else{
+   status.innerText = "HLS not supported";
+  }
+
+ }else{
+  video.src = url;
+  video.play().catch(()=>{});
+ }
+}
+
+function stopStream(){
+ cleanup();
+ status.innerText = "Stopped";
+}
+
+function reloadStream(){
+ if(currentURL){
+  playStream();
+ }
+}
+
+video.addEventListener("playing",()=>{
+ status.innerText = "▶ LIVE PLAYING";
+});
+
+video.addEventListener("waiting",()=>{
+ status.innerText = "Buffering...";
+});
+
+video.addEventListener("error",()=>{
+ status.innerText = "Playback error: URL / CORS / Expiry check karein";
+});
+
+</script>
+</body>
+</html>
